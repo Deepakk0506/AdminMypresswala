@@ -54,18 +54,18 @@ function HeroSection({ heroY, router }: { heroY: any; router: any }) {
   const [errorShake, setErrorShake] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
 
-  // --- Cursor motion values (Silk-Smooth Config) ---
+  // --- Cursor motion values (Butter-Smooth Config) ---
   const cursorX = useMotionValue(0);
   const cursorY = useMotionValue(0);
   const rawMouseX = useMotionValue(0);
   const rawMouseY = useMotionValue(0);
 
-  // Cinematic physics: Higher damping, lower stiffness for fluid organic movement
-  const springCfg = { damping: 65, stiffness: 80, mass: 1, restDelta: 0.001 };
+  // Supreme fluidity: High damping, low stiffness, and higher mass for "liquid" momentum
+  const springCfg = { damping: 100, stiffness: 45, mass: 1.8, restDelta: 0.0001 };
   const smoothX = useSpring(cursorX, springCfg);
   const smoothY = useSpring(cursorY, springCfg);
 
-  const glowCfg = { damping: 45, stiffness: 60 };
+  const glowCfg = { damping: 50, stiffness: 40 };
   const glowX = useSpring(rawMouseX, glowCfg);
   const glowY = useSpring(rawMouseY, glowCfg);
 
