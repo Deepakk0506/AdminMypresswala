@@ -1,15 +1,16 @@
-import { LayoutDashboard, Users, Store, BarChart3, Settings, Bell, Search, Menu, LogOut, PackageSearch } from "lucide-react";
+import { LayoutDashboard, Users, Store, Settings, Bell, Search, Menu, LogOut, PackageSearch, Wrench, CreditCard } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 
 const navigation = [
-    { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
+    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Orders", href: "/dashboard/orders", icon: PackageSearch },
     { name: "Customers", href: "/dashboard/customers", icon: Users },
-    { name: "Shops", href: "/dashboard/shops", icon: Store },
-    { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
+    { name: "Services", href: "/dashboard/services", icon: Wrench },
+    { name: "Pricing", href: "/dashboard/pricing", icon: CreditCard },
+    { name: "Shop", href: "/dashboard/shop", icon: Store },
     { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 

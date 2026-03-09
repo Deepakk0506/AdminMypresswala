@@ -59,7 +59,7 @@ export default function DashboardOverview() {
         <div className="space-y-6 fade-in font-inter">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-poppins font-bold tracking-tight">Overview</h1>
+                    <h1 className="text-3xl font-poppins font-bold tracking-tight">Dashboard</h1>
                     <p className="text-gray-500 dark:text-gray-400 mt-1">Here is what's happening with your business today.</p>
                 </div>
                 <div className="flex items-center space-x-2">

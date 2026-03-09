@@ -29,9 +29,7 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${poppins.variable} font-inter antialiased bg-background-light`}
       >
-        <SmoothScrollProvider>
-          {children}
-        </SmoothScrollProvider>
+        {children}
       </body>
     </html>
   );
