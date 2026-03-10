@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import { Search, Users, Mail, Phone, MapPin, Calendar, TrendingUp, Star, Filter, Edit2, Trash2, Eye, MessageSquare, Tag, Crown, Shield, Clock, DollarSign } from "lucide-react";
+import { Search, Users, Mail, Phone, MapPin, Calendar, TrendingUp, Star, Filter, Edit2, Trash2, Eye, MessageSquare, Tag, Crown, Shield, Clock, DollarSign, ArrowLeft } from "lucide-react";
 
 interface Customer {
   id: string;
@@ -100,6 +101,7 @@ interface CustomerWithDetails extends Customer {
 }
 
 export default function CustomersPage() {
+  const router = useRouter();
   const [customers, setCustomers] = useState<CustomerWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -136,12 +138,43 @@ export default function CustomersPage() {
         return;
       }
 
-      // Fetch order summaries for all customers
-      const { data: orderSummaries } = await supabase
-        .from("customer_order_summary")
-        .select("*");
+      // Fetch order summaries by calculating from actual orders
+      const { data: ordersData } = await supabase
+        .from("orders")
+        .select("customer_id, total_price, status, order_date");
 
-      console.log('📈 Order summaries:', orderSummaries);
+      console.log('📦 Orders data:', ordersData);
+
+      // Calculate order summaries per customer
+      const calculatedSummaries: { [key: string]: CustomerOrderSummary } = {};
+      if (ordersData) {
+        ordersData.forEach(order => {
+          if (!calculatedSummaries[order.customer_id]) {
+            calculatedSummaries[order.customer_id] = {
+              customer_id: order.customer_id,
+              total_orders: 0,
+              total_spent: 0,
+              last_order_date: order.order_date,
+              average_order_value: 0,
+              updated_at: new Date().toISOString()
+            };
+          }
+          
+          const summary = calculatedSummaries[order.customer_id];
+          summary.total_orders += 1;
+          summary.total_spent += order.total_price || 0;
+          if (new Date(order.order_date) > new Date(summary.last_order_date)) {
+            summary.last_order_date = order.order_date;
+          }
+        });
+
+        // Calculate average order value
+        Object.values(calculatedSummaries).forEach(summary => {
+          summary.average_order_value = summary.total_orders > 0 ? summary.total_spent / summary.total_orders : 0;
+        });
+      }
+
+      console.log('� Calculated order summaries:', calculatedSummaries);
 
       // Fetch tags for all customers
       const { data: tags } = await supabase
@@ -165,6 +198,7 @@ export default function CustomersPage() {
         .order("created_at", { ascending: false });
 
       console.log('🏠 Addresses:', addresses);
+      console.log('🏠 Address filter result for first customer:', customersData?.[0] ? addresses?.filter(addr => addr.customer_id === customersData[0].id) : 'No customer data');
 
       // Fetch payment methods for all customers
       const { data: paymentMethods } = await supabase
@@ -173,6 +207,7 @@ export default function CustomersPage() {
         .order("created_at", { ascending: false });
 
       console.log('💳 Payment methods:', paymentMethods);
+      console.log('💳 Payment methods filter result for first customer:', customersData?.[0] ? paymentMethods?.filter(pm => pm.customer_id === customersData[0].id) : 'No customer data');
 
       // Fetch reviews for all customers
       const { data: reviews } = await supabase
@@ -181,6 +216,7 @@ export default function CustomersPage() {
         .order("created_at", { ascending: false });
 
       console.log('⭐ Reviews:', reviews);
+      console.log('🌟 Reviews filter result for first customer:', customersData?.[0] ? reviews?.filter(review => review.customer_id === customersData[0].id) : 'No customer data');
 
       // Fetch notifications for all customers
       const { data: notifications } = await supabase
@@ -189,27 +225,43 @@ export default function CustomersPage() {
         .order("created_at", { ascending: false });
 
       console.log('🔔 Notifications:', notifications);
+      console.log('🔔 Notifications filter result for first customer:', customersData?.[0] ? notifications?.filter(notif => notif.user_id === customersData[0].id) : 'No customer data');
 
       // Combine all data - show all customers even if they don't have related data
-      const customersWithDetails: CustomerWithDetails[] = customersData?.map(customer => ({
-        ...customer,
-        order_summary: orderSummaries?.find(summary => summary.customer_id === customer.id) || {
-          customer_id: customer.id,
-          total_orders: 0,
-          total_spent: 0,
-          last_order_date: customer.created_at,
-          average_order_value: 0,
-          updated_at: new Date().toISOString()
-        },
-        tags: tags?.filter(tag => tag.customer_id === customer.id) || [],
-        communications: communications?.filter(comm => comm.customer_id === customer.id) || [],
-        addresses: addresses?.filter(addr => addr.customer_id === customer.id) || [],
-        payment_methods: paymentMethods?.filter(pm => pm.customer_id === customer.id) || [],
-        reviews: reviews?.filter(review => review.customer_id === customer.id) || [],
-        notifications: notifications?.filter(notif => notif.user_id === customer.id) || []
-      })) || [];
+      const customersWithDetails: CustomerWithDetails[] = customersData?.map(customer => {
+        const customerAddresses = addresses?.filter(addr => addr.customer_id === customer.id) || [];
+        const customerPayments = paymentMethods?.filter(pm => pm.customer_id === customer.id) || [];
+        const customerReviews = reviews?.filter(review => review.customer_id === customer.id) || [];
+        const customerNotifications = notifications?.filter(notif => notif.user_id === customer.id) || [];
+        
+        console.log(`👤 Customer ${customer.id} (${customer.name}):`, {
+          addresses: customerAddresses.length,
+          payments: customerPayments.length,
+          reviews: customerReviews.length,
+          notifications: customerNotifications.length
+        });
+        
+        return {
+          ...customer,
+          order_summary: calculatedSummaries[customer.id] || {
+            customer_id: customer.id,
+            total_orders: 0,
+            total_spent: 0,
+            last_order_date: customer.created_at,
+            average_order_value: 0,
+            updated_at: new Date().toISOString()
+          },
+          tags: tags?.filter(tag => tag.customer_id === customer.id) || [],
+          communications: communications?.filter(comm => comm.customer_id === customer.id) || [],
+          addresses: customerAddresses,
+          payment_methods: customerPayments,
+          reviews: customerReviews,
+          notifications: customerNotifications
+        };
+      }) || [];
 
       console.log('✅ Final customers with details:', customersWithDetails);
+      console.log('🔍 First customer object structure:', customersWithDetails[0]);
       setCustomers(customersWithDetails);
     } catch (err) {
       console.error("Unexpected error:", err);
@@ -275,77 +327,6 @@ export default function CustomersPage() {
     setLoading(false);
   };
 
-  const handleCreateTestCustomer = async () => {
-    try {
-      console.log('🧪 Creating test customer...');
-      
-      // Generate unique phone number and email
-      const timestamp = Date.now();
-      const randomSuffix = Math.floor(Math.random() * 1000);
-      
-      // First create a basic customer
-      const { data: newCustomer, error: customerError } = await supabase
-        .from('customers')
-        .insert({
-          name: `Test Customer ${randomSuffix}`,
-          email: `test${randomSuffix}@example.com`,
-          phone: `+91 98765 ${timestamp.toString().slice(-4)}`,
-          addr: '123 Test Street, Test City'
-        })
-        .select()
-        .single();
-
-      if (customerError) {
-        console.error('❌ Error creating customer:', customerError);
-        setError(`Failed to create test customer: ${customerError.message}`);
-        return;
-      }
-
-      console.log('✅ Test customer created:', newCustomer);
-
-      // Create order summary for this customer
-      const { data: summary, error: summaryError } = await supabase
-        .from('customer_order_summary')
-        .insert({
-          customer_id: newCustomer.id,
-          total_orders: 5,
-          total_spent: 2500,
-          last_order_date: new Date().toISOString(),
-          average_order_value: 500
-        })
-        .select();
-
-      if (summaryError) {
-        console.error('❌ Error creating summary:', summaryError);
-      } else {
-        console.log('✅ Order summary created:', summary);
-      }
-
-      // Create a tag for this customer
-      const { data: tag, error: tagError } = await supabase
-        .from('customer_tags')
-        .insert({
-          customer_id: newCustomer.id,
-          tag_name: 'New',
-          color: '#3B82F6'
-        })
-        .select();
-
-      if (tagError) {
-        console.error('❌ Error creating tag:', tagError);
-      } else {
-        console.log('✅ Tag created:', tag);
-      }
-
-      // Refresh the customers list
-      await fetchCustomers();
-      
-    } catch (err) {
-      console.error('💥 Unexpected error creating test customer:', err);
-      setError(`Unexpected error: ${err}`);
-    }
-  };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', { 
       year: 'numeric', 
@@ -407,12 +388,6 @@ export default function CustomersPage() {
               ))}
             </select>
           </div>
-          <button
-            onClick={handleCreateTestCustomer}
-            className="px-6 py-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl hover:from-green-600 hover:to-green-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-          >
-            Create Test Customer
-          </button>
         </div>
       </div>
 
@@ -430,24 +405,43 @@ export default function CustomersPage() {
 
       {/* Customer Details Modal */}
       {showDetails && selectedCustomer && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-6">
-          <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
-            <div className="p-8">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl max-w-6xl w-full max-h-[95vh] overflow-hidden flex flex-col">
+            {/* Header with guaranteed space for buttons */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white flex-shrink-0">
+              <div className="flex items-center gap-3 flex-1 min-w-0 pr-4">
+                <button
+                  onClick={() => {
+                    setShowDetails(false);
+                    setActiveTab("overview");
+                    router.push("/dashboard/customers");
+                  }}
+                  className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors flex-shrink-0"
+                  title="Go back"
+                >
+                  <ArrowLeft className="w-5 h-5 text-gray-600" />
+                </button>
+                <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent truncate">
                   Customer Details
                 </h2>
+              </div>
+              <div className="flex-shrink-0">
                 <button
                   onClick={() => {
                     setShowDetails(false);
                     setActiveTab("overview");
                   }}
                   className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  title="Close"
                 >
                   <Trash2 className="w-5 h-5 text-gray-600" />
                 </button>
               </div>
-              
+            </div>
+
+            {/* Main content area with scroll */} 
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-6">
               {/* Tab Navigation */}
               <div className="flex space-x-1 mb-6 bg-gray-100 p-1 rounded-xl">
                 {[
@@ -783,6 +777,7 @@ export default function CustomersPage() {
                   <Trash2 className="w-5 h-5" />
                   Delete Customer
                 </button>
+              </div>
               </div>
             </div>
           </div>
