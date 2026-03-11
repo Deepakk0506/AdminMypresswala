@@ -123,18 +123,27 @@ export default function CustomersPage() {
       const { data: testData, error: testError } = await supabase.from('customers').select('count');
       console.log('📊 Basic test result:', { testData, testError });
       
+      if (testError) {
+        console.error('❌ RLS or Connection Error:', testError);
+        setError(`RLS/Connection Error: ${testError.message}. Please run disable-rls-policies.sql in Supabase.`);
+        setCustomers([]);
+        setLoading(false);
+        return;
+      }
+      
       // Fetch customers with their order summaries, tags, and communications
       const { data: customersData, error: customersError } = await supabase
         .from("customers")
         .select("*")
         .order("created_at", { ascending: false });
 
-      console.log('👥 Customers query result:', { data: customersData, error: customersError });
+      console.log('👥 Customers query result:', { data: customersData?.length, error: customersError });
 
       if (customersError) {
-        console.error("Error fetching customers:", customersError);
-        setError(customersError.message);
+        console.error("❌ Error fetching customers:", customersError);
+        setError(`Customers fetch error: ${customersError.message}. Check RLS policies.`);
         setCustomers([]);
+        setLoading(false);
         return;
       }
 

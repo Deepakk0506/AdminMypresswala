@@ -64,42 +64,69 @@ export default function OrdersPage() {
         setError(null);
 
         try {
-            // Fetch orders with service and customer data using JOIN
-            console.log('� Fetching orders with service and customer data...');
+            // First, test basic connection and check RLS
+            console.log('🔍 Testing basic connection...');
+            const { data: testData, error: testError } = await supabase.from('orders').select('count');
+            console.log('📊 Basic test result:', { testData, testError });
+            
+            if (testError) {
+                console.error('❌ RLS or Connection Error:', testError);
+                setError(`RLS/Connection Error: ${testError.message}. Please run disable-rls-policies.sql in Supabase.`);
+                setOrders([]);
+                setLoading(false);
+                return;
+            }
+
+            // Fetch orders first
+            console.log('🔍 Fetching orders...');
             const { data: ordersData, error: ordersError } = await supabase
                 .from("orders")
-                .select(`
-                    *,
-                    customers(name, email, phone),
-                    services(id, service_name, price)
-                `)
+                .select("*")
                 .order("created_at", { ascending: false });
 
             if (ordersError) {
-                console.error("Error fetching orders:", ordersError);
-                setError(ordersError.message);
+                console.error("❌ Error fetching orders:", ordersError);
+                setError(`Orders fetch error: ${ordersError.message}. Check RLS policies.`);
                 setOrders([]);
+                setLoading(false);
                 return;
             }
-            console.log('📦 Raw orders data:', JSON.stringify(ordersData, null, 2));
+            console.log('📦 Raw orders data:', ordersData?.length, 'orders found');
 
-            // Transform data to include service names
+            // Fetch customers separately
+            const { data: customersData, error: customersError } = await supabase
+                .from("customers")
+                .select("id, name, email, phone");
+
+            if (customersError) {
+                console.error("❌ Error fetching customers:", customersError);
+            }
+
+            // Fetch services separately  
+            const { data: servicesData, error: servicesError } = await supabase
+                .from("services")
+                .select("id, service_name, price");
+
+            if (servicesError) {
+                console.error("❌ Error fetching services:", servicesError);
+            }
+
+            console.log('👥 Customers data:', customersData?.length, 'customers found');
+            console.log('🧵 Services data:', servicesData?.length, 'services found');
+
+            // Transform data to include service names and customer info
             const transformedOrders = ordersData?.map((order: any) => {
-                console.log('🔍 Order processing:', {
-                    orderId: order.id,
-                    service_id: order.service_id,
-                    service_name: order.services?.service_name || 'NOT FOUND',
-                    customer_name: order.customers?.name
-                });
+                const customer = customersData?.find(c => c.id === order.customer_id);
+                const service = servicesData?.find(s => s.id === order.service_id);
                 
                 return {
                     ...order,
-                    customer_name: order.customers?.name || 'Unknown Customer',
-                    customer_email: order.customers?.email || '',
-                    customer_phone: order.customers?.phone || '',
-                    service_name: order.services?.service_name || 'Unknown Service',
+                    customer_name: customer?.name || 'Unknown Customer',
+                    customer_email: customer?.email || '',
+                    customer_phone: customer?.phone || '',
+                    service_name: service?.service_name || 'Unknown Service',
                     // Legacy fields for compatibility
-                    customerName: order.customers?.name || 'Unknown Customer',
+                    customerName: customer?.name || 'Unknown Customer',
                     items: order.quantity,
                     urgency: order.priority_level === 'express' ? 'Express' : 'Normal',
                     amount: order.total_price,
@@ -107,7 +134,7 @@ export default function OrdersPage() {
                 };
             }) || [];
 
-            console.log('✅ Final transformed orders:', transformedOrders);
+            console.log('✅ Final transformed orders:', transformedOrders.length, 'orders ready to display');
             setOrders(transformedOrders);
 
         } catch (err) {
@@ -153,7 +180,7 @@ export default function OrdersPage() {
     };
 
     const filteredOrders = orders.filter(order => {
-        const matchesSearch = 
+        const matchesSearch = !searchTerm || 
             order.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
             order.service_name?.toLowerCase().includes(searchTerm.toLowerCase());
