@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { Save, X, DollarSign, Package, RefreshCw } from "lucide-react";
+import { Save, X, DollarSign, Package, RefreshCw, Package as PackageIcon, Scale, Truck } from "lucide-react";
+import ServiceIcon from "./services/ServiceIcon";
 
 interface Service {
   id: string;
@@ -25,6 +26,7 @@ interface PricingFormProps {
 export default function PricingForm({ initialData, onSubmit, onCancel, loading = false }: PricingFormProps) {
   const [services, setServices] = useState<Service[]>([]);
   const [servicesLoading, setServicesLoading] = useState(true);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [formData, setFormData] = useState<PricingFormData>({
     service_id: "",
     unit: "per item",
@@ -32,9 +34,9 @@ export default function PricingForm({ initialData, onSubmit, onCancel, loading =
   });
 
   const units = [
-    { value: "per item", label: "Per Item" },
-    { value: "per kg", label: "Per Kilogram" },
-    { value: "per trip", label: "Per Trip" }
+    { value: "per item", label: "Per Item", icon: PackageIcon },
+    { value: "per kg", label: "Per Kilogram", icon: Scale },
+    { value: "per trip", label: "Per Trip", icon: Truck }
   ];
 
   useEffect(() => {
@@ -118,20 +120,54 @@ export default function PricingForm({ initialData, onSubmit, onCancel, loading =
               <Package className="inline w-4 h-4 mr-2 text-blue-500" />
               Service *
             </label>
-            <select
-              value={formData.service_id}
-              onChange={(e) => setFormData({ ...formData, service_id: e.target.value })}
-              disabled={loading || servicesLoading}
-              className="w-full px-5 py-4 bg-white/80 backdrop-blur-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm transition-all duration-200 text-gray-800 disabled:opacity-50"
-              required
-            >
-              <option value="">Select a service</option>
-              {services.map((service) => (
-                <option key={service.id} value={service.id}>
-                  {service.service_name}
-                </option>
-              ))}
-            </select>
+            {/* Custom Service Dropdown with Icons */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                disabled={loading || servicesLoading}
+                className="w-full px-12 py-4 bg-white/80 backdrop-blur-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm transition-all duration-200 text-gray-800 disabled:opacity-50 text-left flex items-center justify-between"
+              >
+                <span className={formData.service_id ? "text-gray-900" : "text-gray-500"}>
+                  {formData.service_id 
+                    ? (() => {
+                        const selectedService = services.find(s => s.id === formData.service_id);
+                        return selectedService ? selectedService.service_name : "Select a service";
+                      })()
+                    : "Select a service"
+                  }
+                </span>
+                <Package className="w-4 h-4 text-gray-400" />
+              </button>
+
+              {/* Dropdown Options */}
+              {isDropdownOpen && (
+                <div className="absolute top-full left-0 right-0 mt-2 w-full bg-white border border-gray-300 rounded-xl shadow-xl z-50 max-h-60 overflow-y-auto">
+                  <div className="py-2">
+                    {services.map((service) => (
+                      <button
+                        key={service.id}
+                        type="button"
+                        onClick={() => {
+                          setFormData({ ...formData, service_id: service.id });
+                          setIsDropdownOpen(false);
+                        }}
+                        className={`w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-blue-50 transition-colors ${
+                          formData.service_id === service.id ? 'bg-blue-100' : ''
+                        }`}
+                      >
+                        <div className="w-5 h-5 flex items-center justify-center">
+                          <ServiceIcon serviceName={service.service_name} size={16} />
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">
+                          {service.service_name}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
             {servicesLoading && (
               <p className="text-sm text-gray-500 mt-2">Loading services...</p>
             )}
@@ -161,8 +197,8 @@ export default function PricingForm({ initialData, onSubmit, onCancel, loading =
                     disabled={loading}
                     className="sr-only"
                   />
-                  <div className="flex items-center">
-                    <div className={`w-4 h-4 rounded-full border-2 mr-3 flex items-center justify-center ${
+                  <div className="flex items-center gap-3">
+                    <div className={`w-4 h-4 rounded-full border-2 mr-2 flex items-center justify-center ${
                       formData.unit === unit.value
                         ? "border-blue-500 bg-blue-500"
                         : "border-gray-300"
@@ -171,11 +207,14 @@ export default function PricingForm({ initialData, onSubmit, onCancel, loading =
                         <div className="w-2 h-2 bg-white rounded-full"></div>
                       )}
                     </div>
-                    <span className={`font-medium ${
-                      formData.unit === unit.value ? "text-blue-700" : "text-gray-700"
-                    }`}>
-                      {unit.label}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <unit.icon size={18} className="text-blue-600" />
+                      <span className={`font-medium text-sm ${
+                        formData.unit === unit.value ? "text-blue-700" : "text-gray-700"
+                      }`}>
+                        {unit.label}
+                      </span>
+                    </div>
                   </div>
                 </label>
               ))}

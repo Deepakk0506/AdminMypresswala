@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { Edit2, Trash2, Package, DollarSign, Calendar, Tag } from "lucide-react";
+import { Edit2, Trash2, Package, DollarSign, Calendar, Tag, Scale, Truck } from "lucide-react";
+import ServiceIcon from "./services/ServiceIcon";
 
 interface Service {
   id: string;
@@ -55,13 +56,13 @@ export default function PricingTable({ pricing, onEdit, onDelete, loading = fals
   const getUnitIcon = (unit: string) => {
     switch (unit) {
       case 'per item':
-        return <Package className="w-4 h-4" />;
+        return <Package className="w-4 h-4 text-blue-600" />;
       case 'per kg':
-        return <Tag className="w-4 h-4" />;
+        return <Scale className="w-4 h-4 text-blue-600" />;
       case 'per trip':
-        return <Calendar className="w-4 h-4" />;
+        return <Truck className="w-4 h-4 text-blue-600" />;
       default:
-        return <Package className="w-4 h-4" />;
+        return <Package className="w-4 h-4 text-blue-600" />;
     }
   };
 
@@ -157,24 +158,27 @@ export default function PricingTable({ pricing, onEdit, onDelete, loading = fals
                 {/* Service Name */}
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <Package className="w-4 h-4 text-blue-600" />
+                    <div className="p-2 bg-blue-100 rounded-lg shadow-sm border border-blue-200">
+                      {(() => {
+                        console.log(`🔍 PricingTable - Service Name: "${item.services?.service_name}"`);
+                        console.log(`🔍 Full service object:`, item.services);
+                        return item.services?.service_name ? (
+                          <ServiceIcon serviceName={item.services.service_name} size={18} />
+                        ) : (
+                          <Package className="w-4 h-4 text-blue-700" />
+                        );
+                      })()}
                     </div>
-                    <div>
-                      <div className="text-sm font-semibold text-gray-900">
-                        {item.services?.service_name || 'Unknown Service'}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        ID: {item.service_id.slice(0, 8)}...
-                      </div>
-                    </div>
+                    <span className="text-sm font-medium text-gray-700">
+                      {item.services?.service_name || 'Unknown Service'}
+                    </span>
                   </div>
                 </td>
 
                 {/* Unit */}
                 <td className="px-6 py-4">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-gray-100 rounded-md">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-100 rounded-lg shadow-sm border border-blue-200">
                       {getUnitIcon(item.unit)}
                     </div>
                     <span className="text-sm font-medium text-gray-700">
