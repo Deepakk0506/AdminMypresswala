@@ -94,6 +94,7 @@ export default function PricingPage() {
         console.log('Pricing added successfully:', data);
         setIsAdding(false);
         await fetchPricing();
+        // Show success message
         showSuccessMessage('Pricing added successfully!');
       }
     } catch (err) {
@@ -173,6 +174,7 @@ export default function PricingPage() {
   };
 
   const showSuccessMessage = (message: string) => {
+    // Create a simple success notification
     const notification = document.createElement('div');
     notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-3 animate-pulse';
     notification.innerHTML = `
@@ -194,12 +196,14 @@ export default function PricingPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 relative overflow-hidden">
+      {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-20 left-20 w-72 h-72 bg-blue-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse"></div>
         <div className="absolute top-40 right-20 w-96 h-96 bg-gray-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse animation-delay-2000"></div>
         <div className="absolute bottom-20 left-1/2 w-80 h-80 bg-blue-100 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse animation-delay-4000"></div>
       </div>
       
+      {/* Header */}
       <div className="mb-8 relative z-10">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-6">
@@ -232,6 +236,7 @@ export default function PricingPage() {
           </div>
         </div>
 
+        {/* Search Bar */}
         <div className="relative max-w-2xl">
           <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-blue-500 rounded-xl blur-lg opacity-20"></div>
           <Search className="absolute left-5 top-1/2 transform -translate-y-1/2 w-6 h-6 text-blue-500 z-10" />
@@ -245,6 +250,7 @@ export default function PricingPage() {
         </div>
       </div>
 
+      {/* Error State */}
       {error && (
         <div className="mb-8 p-6 bg-red-50/80 backdrop-blur-sm border border-red-200 rounded-xl shadow-lg relative z-10">
           <div className="flex items-center gap-3">
@@ -256,6 +262,7 @@ export default function PricingPage() {
         </div>
       )}
 
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 relative z-10">
         <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-lg p-6 border border-white/40 transform hover:scale-[1.02] transition-transform duration-300">
           <div className="flex items-center justify-between">
@@ -300,6 +307,7 @@ export default function PricingPage() {
         </div>
       </div>
 
+      {/* Add/Edit Form */}
       {(isAdding || editingItem) && (
         <div className="mb-8 relative z-10">
           <PricingForm
@@ -316,6 +324,7 @@ export default function PricingPage() {
         </div>
       )}
 
+      {/* Pricing Table */}
       <div className="relative z-10">
         <PricingTable
           pricing={filteredPricing}
