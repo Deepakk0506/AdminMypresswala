@@ -7,13 +7,19 @@ import ServiceIcon from "./services/ServiceIcon";
 
 interface Service {
   id: string;
-  service_name: string;
+  name: string;
+}
+
+interface Garment {
+  id: string;
+  name: string;
 }
 
 interface PricingFormData {
   service_id: string;
-  unit: string;
+  garment_id: string;
   price: string;
+  is_available: boolean;
 }
 
 interface PricingFormProps {
@@ -25,30 +31,30 @@ interface PricingFormProps {
 
 export default function PricingForm({ initialData, onSubmit, onCancel, loading = false }: PricingFormProps) {
   const [services, setServices] = useState<Service[]>([]);
+  const [garments, setGarments] = useState<Garment[]>([]);
   const [servicesLoading, setServicesLoading] = useState(true);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [garmentsLoading, setGarmentsLoading] = useState(true);
+  const [isServiceDropdownOpen, setIsServiceDropdownOpen] = useState(false);
+  const [isGarmentDropdownOpen, setIsGarmentDropdownOpen] = useState(false);
   const [formData, setFormData] = useState<PricingFormData>({
     service_id: "",
-    unit: "per item",
-    price: ""
+    garment_id: "",
+    price: "",
+    is_available: true
   });
-
-  const units = [
-    { value: "per item", label: "Per Item", icon: PackageIcon },
-    { value: "per kg", label: "Per Kilogram", icon: Scale },
-    { value: "per trip", label: "Per Trip", icon: Truck }
-  ];
 
   useEffect(() => {
     fetchServices();
+    fetchGarments();
   }, []);
 
   useEffect(() => {
     if (initialData) {
       setFormData({
         service_id: initialData.service_id,
-        unit: initialData.unit,
-        price: initialData.price
+        garment_id: initialData.garment_id,
+        price: initialData.price,
+        is_available: initialData.is_available ?? true
       });
     }
   }, [initialData]);
@@ -58,9 +64,9 @@ export default function PricingForm({ initialData, onSubmit, onCancel, loading =
     try {
       const { data, error } = await supabase
         .from("services")
-        .select("id, service_name")
-        .eq("status", true)
-        .order("service_name");
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
 
       if (error) {
         console.error("Error fetching services:", error);
@@ -73,21 +79,43 @@ export default function PricingForm({ initialData, onSubmit, onCancel, loading =
     setServicesLoading(false);
   };
 
+  const fetchGarments = async () => {
+    setGarmentsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("garments")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+
+      if (error) {
+        console.error("Error fetching garments:", error);
+      } else {
+        setGarments(data || []);
+      }
+    } catch (err) {
+      console.error("Unexpected error:", err);
+    }
+    setGarmentsLoading(false);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.service_id || !formData.price) {
+    if (!formData.service_id || !formData.garment_id || !formData.price) {
       return;
     }
 
+    console.log('Submitting pricing form:', formData);
     await onSubmit(formData);
   };
 
   const handleReset = () => {
     setFormData({
       service_id: initialData?.service_id || "",
-      unit: initialData?.unit || "per item",
-      price: initialData?.price || ""
+      garment_id: initialData?.garment_id || "",
+      price: initialData?.price || "",
+      is_available: initialData?.is_available ?? true
     });
   };
 
@@ -124,7 +152,7 @@ export default function PricingForm({ initialData, onSubmit, onCancel, loading =
             <div className="relative">
               <button
                 type="button"
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                onClick={() => setIsServiceDropdownOpen(!isServiceDropdownOpen)}
                 disabled={loading || servicesLoading}
                 className="w-full px-12 py-4 bg-white/80 backdrop-blur-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm transition-all duration-200 text-gray-800 disabled:opacity-50 text-left flex items-center justify-between"
               >
@@ -132,7 +160,7 @@ export default function PricingForm({ initialData, onSubmit, onCancel, loading =
                   {formData.service_id 
                     ? (() => {
                         const selectedService = services.find(s => s.id === formData.service_id);
-                        return selectedService ? selectedService.service_name : "Select a service";
+                        return selectedService ? selectedService.name : "Select a service";
                       })()
                     : "Select a service"
                   }
@@ -141,7 +169,7 @@ export default function PricingForm({ initialData, onSubmit, onCancel, loading =
               </button>
 
               {/* Dropdown Options */}
-              {isDropdownOpen && (
+              {isServiceDropdownOpen && (
                 <div className="absolute top-full left-0 right-0 mt-2 w-full bg-white border border-gray-300 rounded-xl shadow-xl z-50 max-h-60 overflow-y-auto">
                   <div className="py-2">
                     {services.map((service) => (
@@ -150,17 +178,17 @@ export default function PricingForm({ initialData, onSubmit, onCancel, loading =
                         type="button"
                         onClick={() => {
                           setFormData({ ...formData, service_id: service.id });
-                          setIsDropdownOpen(false);
+                          setIsServiceDropdownOpen(false);
                         }}
                         className={`w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-blue-50 transition-colors ${
                           formData.service_id === service.id ? 'bg-blue-100' : ''
                         }`}
                       >
                         <div className="w-5 h-5 flex items-center justify-center">
-                          <ServiceIcon serviceName={service.service_name} size={16} />
+                          <ServiceIcon serviceName={service.name} size={16} />
                         </div>
                         <span className="text-sm font-medium text-gray-700">
-                          {service.service_name}
+                          {service.name}
                         </span>
                       </button>
                     ))}
@@ -173,51 +201,89 @@ export default function PricingForm({ initialData, onSubmit, onCancel, loading =
             )}
           </div>
 
-          {/* Unit Selection */}
+          {/* Garment Selection */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-3">
-              Unit Type *
+              <Package className="inline w-4 h-4 mr-2 text-blue-500" />
+              Garment *
             </label>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {units.map((unit) => (
-                <label
-                  key={unit.value}
-                  className={`relative flex items-center p-4 bg-white/80 backdrop-blur-sm border-2 rounded-xl cursor-pointer transition-all duration-200 ${
-                    formData.unit === unit.value
-                      ? "border-blue-500 bg-blue-50 shadow-md"
-                      : "border-gray-300 hover:border-gray-400"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="unit"
-                    value={unit.value}
-                    checked={formData.unit === unit.value}
-                    onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                    disabled={loading}
-                    className="sr-only"
-                  />
-                  <div className="flex items-center gap-3">
-                    <div className={`w-4 h-4 rounded-full border-2 mr-2 flex items-center justify-center ${
-                      formData.unit === unit.value
-                        ? "border-blue-500 bg-blue-500"
-                        : "border-gray-300"
-                    }`}>
-                      {formData.unit === unit.value && (
-                        <div className="w-2 h-2 bg-white rounded-full"></div>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <unit.icon size={18} className="text-blue-600" />
-                      <span className={`font-medium text-sm ${
-                        formData.unit === unit.value ? "text-blue-700" : "text-gray-700"
-                      }`}>
-                        {unit.label}
-                      </span>
-                    </div>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsGarmentDropdownOpen(!isGarmentDropdownOpen)}
+                disabled={loading || garmentsLoading}
+                className="w-full px-12 py-4 bg-white/80 backdrop-blur-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm transition-all duration-200 text-gray-800 disabled:opacity-50 text-left flex items-center justify-between"
+              >
+                <span className={formData.garment_id ? "text-gray-900" : "text-gray-500"}>
+                  {formData.garment_id 
+                    ? (() => {
+                        const selectedGarment = garments.find(g => g.id === formData.garment_id);
+                        return selectedGarment ? selectedGarment.name : "Select a garment";
+                      })()
+                    : "Select a garment"
+                  }
+                </span>
+                <Package className="w-4 h-4 text-gray-400" />
+              </button>
+
+              {/* Dropdown Options */}
+              {isGarmentDropdownOpen && (
+                <div className="absolute top-full left-0 right-0 mt-2 w-full bg-white border border-gray-300 rounded-xl shadow-xl z-50 max-h-60 overflow-y-auto">
+                  <div className="py-2">
+                    {garments.map((garment) => (
+                      <button
+                        key={garment.id}
+                        type="button"
+                        onClick={() => {
+                          setFormData({ ...formData, garment_id: garment.id });
+                          setIsGarmentDropdownOpen(false);
+                        }}
+                        className={`w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-blue-50 transition-colors ${
+                          formData.garment_id === garment.id ? 'bg-blue-100' : ''
+                        }`}
+                      >
+                        <span className="text-sm font-medium text-gray-700">
+                          {garment.name}
+                        </span>
+                      </button>
+                    ))}
                   </div>
-                </label>
-              ))}
+                </div>
+              )}
+            </div>
+            {garmentsLoading && (
+              <p className="text-sm text-gray-500 mt-2">Loading garments...</p>
+            )}
+          </div>
+
+          {/* Availability Toggle */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-3">
+              Availability
+            </label>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="radio"
+                  name="is_available"
+                  checked={formData.is_available === true}
+                  onChange={() => setFormData({ ...formData, is_available: true })}
+                  disabled={loading}
+                  className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">Available</span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="radio"
+                  name="is_available"
+                  checked={formData.is_available === false}
+                  onChange={() => setFormData({ ...formData, is_available: false })}
+                  disabled={loading}
+                  className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">Unavailable</span>
+              </label>
             </div>
           </div>
 
@@ -235,7 +301,7 @@ export default function PricingForm({ initialData, onSubmit, onCancel, loading =
                 value={formData.price}
                 onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                 disabled={loading}
-                className="w-full pl-12 pr-5 py-4 bg-white/80 backdrop-blur-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm transition-all duration-200 text-gray-800 placeholder-gray-500 disabled:opacity-50"
+                className="w-full pl-12 pr-5 py-4 bg-white/80 backdrop-blur-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm transition-all duration-200 text-gray-800 placeholder-gray-500"
                 placeholder="0.00"
                 required
               />
@@ -246,7 +312,7 @@ export default function PricingForm({ initialData, onSubmit, onCancel, loading =
           <div className="flex gap-4 pt-6">
             <button
               type="submit"
-              disabled={loading || !formData.service_id || !formData.price}
+              disabled={loading || !formData.service_id || !formData.garment_id || !formData.price}
               className="group relative flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
             >
               <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>

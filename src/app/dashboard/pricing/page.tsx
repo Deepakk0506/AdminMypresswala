@@ -8,23 +8,31 @@ import PricingTable from "@/components/PricingTable";
 
 interface Service {
   id: string;
-  service_name: string;
+  name: string;
+}
+
+interface Garment {
+  id: string;
+  name: string;
 }
 
 interface Pricing {
   id: string;
   service_id: string;
-  unit: string;
+  garment_id: string;
   price: number;
-  created_at: string;
-  updated_at: string;
+  is_available: boolean;
+  created_at?: string;
+  updated_at?: string;
   services?: Service;
+  garments?: Garment;
 }
 
 interface PricingFormData {
   service_id: string;
-  unit: string;
+  garment_id: string;
   price: string;
+  is_available: boolean;
 }
 
 export default function PricingPage() {
@@ -42,15 +50,19 @@ export default function PricingPage() {
     
     try {
       const { data, error } = await supabase
-        .from("pricing")
+        .from("service_garment_pricing")
         .select(`
           *,
-          services (
+          services!inner (
             id,
-            service_name
+            name
+          ),
+          garments!inner (
+            id,
+            name
           )
         `)
-        .order("updated_at", { ascending: false });
+        .order("id", { ascending: false });
 
       if (error) {
         console.error("Error fetching pricing:", error);
@@ -78,12 +90,13 @@ export default function PricingPage() {
     try {
       const pricingData = {
         service_id: formData.service_id,
-        unit: formData.unit,
-        price: parseFloat(formData.price)
+        garment_id: formData.garment_id,
+        price: parseFloat(formData.price),
+        is_available: formData.is_available
       };
 
       const { data, error } = await supabase
-        .from('pricing')
+        .from('service_garment_pricing')
         .insert([pricingData])
         .select();
 
@@ -112,13 +125,13 @@ export default function PricingPage() {
     try {
       const pricingData = {
         service_id: formData.service_id,
-        unit: formData.unit,
+        garment_id: formData.garment_id,
         price: parseFloat(formData.price),
-        updated_at: new Date().toISOString()
+        is_available: formData.is_available
       };
 
       const { error } = await supabase
-        .from('pricing')
+        .from('service_garment_pricing')
         .update(pricingData)
         .eq('id', editingItem.id);
 
@@ -143,7 +156,7 @@ export default function PricingPage() {
     
     try {
       const { error } = await supabase
-        .from('pricing')
+        .from('service_garment_pricing')
         .delete()
         .eq('id', id);
 
@@ -162,6 +175,7 @@ export default function PricingPage() {
   };
 
   const handleEdit = (item: Pricing) => {
+    console.log('Editing pricing item:', item);
     setEditingItem(item);
     setIsAdding(false);
   };
@@ -187,8 +201,8 @@ export default function PricingPage() {
   };
 
   const filteredPricing = pricing.filter(item => 
-    (item.services?.service_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.unit.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (item.services?.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (item.garments?.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     item.price.toString().includes(searchTerm)
   );
 
@@ -237,7 +251,7 @@ export default function PricingPage() {
           <Search className="absolute left-5 top-1/2 transform -translate-y-1/2 w-6 h-6 text-blue-500 z-10" />
           <input
             type="text"
-            placeholder="Search by service name, unit, or price..."
+            placeholder="Search by service name, garment name, or price..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="relative w-full pl-14 pr-6 py-4 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm transition-all duration-200 text-gray-800 placeholder-gray-500"
@@ -306,8 +320,9 @@ export default function PricingPage() {
             initialData={editingItem ? {
               id: editingItem.id,
               service_id: editingItem.service_id,
-              unit: editingItem.unit,
-              price: editingItem.price.toString()
+              garment_id: editingItem.garment_id,
+              price: editingItem.price.toString(),
+              is_available: editingItem.is_available
             } : undefined}
             onSubmit={isAdding ? handleAddPricing : handleUpdatePricing}
             onCancel={handleCancel}

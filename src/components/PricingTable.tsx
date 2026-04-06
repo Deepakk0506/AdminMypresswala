@@ -7,17 +7,24 @@ import ServiceIcon from "./services/ServiceIcon";
 
 interface Service {
   id: string;
-  service_name: string;
+  name: string;
+}
+
+interface Garment {
+  id: string;
+  name: string;
 }
 
 interface Pricing {
   id: string;
   service_id: string;
-  unit: string;
+  garment_id: string;
   price: number;
-  created_at: string;
-  updated_at: string;
+  is_available: boolean;
+  created_at?: string;
+  updated_at?: string;
   services?: Service;
+  garments?: Garment;
 }
 
 interface PricingTableProps {
@@ -43,7 +50,8 @@ export default function PricingTable({ pricing, onEdit, onDelete, loading = fals
     }
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-US', { 
       year: 'numeric', 
       month: 'short', 
@@ -53,31 +61,6 @@ export default function PricingTable({ pricing, onEdit, onDelete, loading = fals
     });
   };
 
-  const getUnitIcon = (unit: string) => {
-    switch (unit) {
-      case 'per item':
-        return <Package className="w-4 h-4 text-blue-600" />;
-      case 'per kg':
-        return <Scale className="w-4 h-4 text-blue-600" />;
-      case 'per trip':
-        return <Truck className="w-4 h-4 text-blue-600" />;
-      default:
-        return <Package className="w-4 h-4 text-blue-600" />;
-    }
-  };
-
-  const getUnitLabel = (unit: string) => {
-    switch (unit) {
-      case 'per item':
-        return 'Per Item';
-      case 'per kg':
-        return 'Per Kilogram';
-      case 'per trip':
-        return 'Per Trip';
-      default:
-        return unit;
-    }
-  };
 
   if (loading) {
     return (
@@ -134,10 +117,13 @@ export default function PricingTable({ pricing, onEdit, onDelete, loading = fals
                 Service
               </th>
               <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                Unit
+                Garment
               </th>
               <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                 Price
+              </th>
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                Availability
               </th>
               <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                 Last Updated
@@ -160,29 +146,29 @@ export default function PricingTable({ pricing, onEdit, onDelete, loading = fals
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-blue-100 rounded-lg shadow-sm border border-blue-200">
                       {(() => {
-                        console.log(`🔍 PricingTable - Service Name: "${item.services?.service_name}"`);
+                        console.log(`🔍 PricingTable - Service Name: "${item.services?.name}"`);
                         console.log(`🔍 Full service object:`, item.services);
-                        return item.services?.service_name ? (
-                          <ServiceIcon serviceName={item.services.service_name} size={18} />
+                        return item.services?.name ? (
+                          <ServiceIcon serviceName={item.services.name} size={18} />
                         ) : (
                           <Package className="w-4 h-4 text-blue-700" />
                         );
                       })()}
                     </div>
                     <span className="text-sm font-medium text-gray-700">
-                      {item.services?.service_name || 'Unknown Service'}
+                      {item.services?.name || 'Unknown Service'}
                     </span>
                   </div>
                 </td>
 
-                {/* Unit */}
+                {/* Garment Name */}
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 rounded-lg shadow-sm border border-blue-200">
-                      {getUnitIcon(item.unit)}
+                    <div className="p-2 bg-green-100 rounded-lg shadow-sm border border-green-200">
+                      <Package className="w-4 h-4 text-green-700" />
                     </div>
                     <span className="text-sm font-medium text-gray-700">
-                      {getUnitLabel(item.unit)}
+                      {item.garments?.name || 'Unknown Garment'}
                     </span>
                   </div>
                 </td>
@@ -194,6 +180,20 @@ export default function PricingTable({ pricing, onEdit, onDelete, loading = fals
                       ₹{item.price.toFixed(2)}
                     </span>
                     <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                  </div>
+                </td>
+
+                {/* Availability */}
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${
+                      item.is_available ? 'bg-green-400' : 'bg-red-400'
+                    }`}></div>
+                    <span className={`text-sm font-medium ${
+                      item.is_available ? 'text-green-700' : 'text-red-700'
+                    }`}>
+                      {item.is_available ? 'Available' : 'Unavailable'}
+                    </span>
                   </div>
                 </td>
 

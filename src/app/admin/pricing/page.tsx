@@ -8,23 +8,31 @@ import PricingTable from "@/components/PricingTable";
 
 interface Service {
   id: string;
-  service_name: string;
+  name: string;
 }
 
 interface Pricing {
   id: string;
   service_id: string;
-  unit: string;
+  garment_id: string;
   price: number;
-  created_at: string;
-  updated_at: string;
+  is_available: boolean;
+  created_at?: string;
+  updated_at?: string;
   services?: Service;
+  garments?: Garment;
+}
+
+interface Garment {
+  id: string;
+  name: string;
 }
 
 interface PricingFormData {
   service_id: string;
-  unit: string;
+  garment_id: string;
   price: string;
+  is_available: boolean;
 }
 
 export default function PricingPage() {
@@ -42,22 +50,31 @@ export default function PricingPage() {
     
     try {
       const { data, error } = await supabase
-        .from("pricing")
+        .from("service_garment_pricing")
         .select(`
           *,
-          services (
+          services!inner (
             id,
-            service_name
+            name
+          ),
+          garments!inner (
+            id,
+            name
           )
         `)
-        .order("updated_at", { ascending: false });
+        .order("id", { ascending: false });
 
       if (error) {
         console.error("Error fetching pricing:", error);
         setError(error.message);
         setPricing([]);
       } else {
-        setPricing(data || []);
+        // Convert price from string to number if needed
+        const processedData = (data || []).map(item => ({
+          ...item,
+          price: typeof item.price === 'string' ? parseFloat(item.price) : item.price
+        }));
+        setPricing(processedData);
       }
     } catch (err) {
       console.error("Unexpected error:", err);
@@ -78,12 +95,13 @@ export default function PricingPage() {
     try {
       const pricingData = {
         service_id: formData.service_id,
-        unit: formData.unit,
-        price: parseFloat(formData.price)
+        garment_id: formData.garment_id,
+        price: parseFloat(formData.price),
+        is_available: formData.is_available
       };
 
       const { data, error } = await supabase
-        .from('pricing')
+        .from('service_garment_pricing')
         .insert([pricingData])
         .select();
 
@@ -113,13 +131,13 @@ export default function PricingPage() {
     try {
       const pricingData = {
         service_id: formData.service_id,
-        unit: formData.unit,
+        garment_id: formData.garment_id,
         price: parseFloat(formData.price),
-        updated_at: new Date().toISOString()
+        is_available: formData.is_available
       };
 
       const { error } = await supabase
-        .from('pricing')
+        .from('service_garment_pricing')
         .update(pricingData)
         .eq('id', editingItem.id);
 
@@ -144,7 +162,7 @@ export default function PricingPage() {
     
     try {
       const { error } = await supabase
-        .from('pricing')
+        .from('service_garment_pricing')
         .delete()
         .eq('id', id);
 
@@ -189,8 +207,8 @@ export default function PricingPage() {
   };
 
   const filteredPricing = pricing.filter(item => 
-    (item.services?.service_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.unit.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (item.services?.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (item.garments?.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     item.price.toString().includes(searchTerm)
   );
 
@@ -314,8 +332,9 @@ export default function PricingPage() {
             initialData={editingItem ? {
               id: editingItem.id,
               service_id: editingItem.service_id,
-              unit: editingItem.unit,
-              price: editingItem.price.toString()
+              garment_id: editingItem.garment_id,
+              price: editingItem.price.toString(),
+              is_available: editingItem.is_available
             } : undefined}
             onSubmit={isAdding ? handleAddPricing : handleUpdatePricing}
             onCancel={handleCancel}

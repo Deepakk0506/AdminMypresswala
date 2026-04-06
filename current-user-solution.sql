@@ -60,3 +60,72 @@ WHERE table_schema = 'public'
     AND grantee IN ('authenticated', 'public')
     AND privilege_type IN ('SELECT', 'INSERT', 'UPDATE', 'DELETE')
 ORDER BY table_name, grantee, privilege_type;
+
+-- Drop the price table
+DROP TABLE IF EXISTS price;
+
+-- Query to check columns and data types for a specific table
+-- Replace 'your_table_name' with the actual table name you want to inspect
+SELECT 
+    column_name,
+    data_type,
+    character_maximum_length,
+    is_nullable,
+    column_default,
+    ordinal_position
+FROM information_schema.columns 
+WHERE table_schema = 'public' 
+    AND table_name = 'your_table_name'  -- Replace with your table name
+ORDER BY ordinal_position;
+
+-- Check current user and table ownership
+SELECT current_user, session_user;
+
+-- Check who owns the service_garment_pricing table
+SELECT tableowner FROM pg_tables WHERE tablename = 'service_garment_pricing';
+
+-- Check the actual column names in the services table
+SELECT column_name, data_type 
+FROM information_schema.columns 
+WHERE table_schema = 'public' 
+    AND table_name = 'services'
+ORDER BY ordinal_position;
+
+-- Check the actual column names in the garments table  
+SELECT column_name, data_type 
+FROM information_schema.columns 
+WHERE table_schema = 'public' 
+    AND table_name = 'garments'
+ORDER BY ordinal_position;
+
+-- Test the corrected query
+SELECT 
+    sgp.*,
+    s.name as service_name,
+    g.name as garment_name
+FROM service_garment_pricing sgp
+LEFT JOIN services s ON sgp.service_id = s.id
+LEFT JOIN garments g ON sgp.garment_id = g.id
+LIMIT 5;
+
+-- Check existing constraints
+SELECT 
+    constraint_name,
+    table_name,
+    constraint_type
+FROM information_schema.table_constraints 
+WHERE table_name IN ('service_garment_pricing', 'services', 'garments')
+ORDER BY table_name, constraint_name;
+
+-- Try a simpler approach - test if we can query without explicit constraints
+SELECT 
+    sgp.id,
+    sgp.price,
+    sgp.is_available,
+    s.name as service_name,
+    g.name as garment_name
+FROM service_garment_pricing sgp
+INNER JOIN services s ON sgp.service_id = s.id
+INNER JOIN garments g ON sgp.garment_id = g.id
+ORDER BY sgp.id
+LIMIT 5;
