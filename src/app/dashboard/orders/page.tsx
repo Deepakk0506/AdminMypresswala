@@ -11,8 +11,8 @@ type OrderStatus = "New" | "Processing" | "Completed" | "Picked Up" | "In Progre
 
 interface Order {
     id: string;
-    customer_id: string;
-    service_id: string;
+    customer_id: string;  // UUID from customers table
+    services_id: number;     // INTEGER from services table
     quantity: number;
     total_price: number;
     status: OrderStatus;
@@ -105,26 +105,33 @@ export default function OrdersPage() {
             // Fetch services separately  
             const { data: servicesData, error: servicesError } = await supabase
                 .from("services")
-                .select("id, service_name, price");
+                .select("id, name, description, icon_url, is_active");
 
             if (servicesError) {
                 console.error("❌ Error fetching services:", servicesError);
+                setError(`Error fetching services: ${servicesError.message || 'Unknown error'}`);
             }
 
             console.log('👥 Customers data:', customersData?.length, 'customers found');
             console.log('🧵 Services data:', servicesData?.length, 'services found');
+            console.log('📋 First order customers_id:', ordersData?.[0]?.customers_id, 'services_id:', ordersData?.[0]?.services_id);
 
             // Transform data to include service names and customer info
-            const transformedOrders = ordersData?.map((order: any) => {
+            const transformedOrders = ordersData?.map((order: any, index: number) => {
                 const customer = customersData?.find(c => c.id === order.customer_id);
-                const service = servicesData?.find(s => s.id === order.service_id);
+                const service = servicesData?.find(s => s.id === order.services_id);
+                
+                if (index === 0) {
+                    console.log('🔍 Order 0 - customer_id:', order.customer_id, 'services_id:', order.services_id);
+                    console.log('🔍 Found customer:', customer?.name || 'NOT FOUND', 'Found service:', service?.name || 'NOT FOUND');
+                }
                 
                 return {
                     ...order,
                     customer_name: customer?.name || 'Unknown Customer',
                     customer_email: customer?.email || '',
                     customer_phone: customer?.phone || '',
-                    service_name: service?.service_name || 'Unknown Service',
+                    service_name: service?.name || 'Unknown Service',
                     // Legacy fields for compatibility
                     customerName: customer?.name || 'Unknown Customer',
                     items: order.quantity,
