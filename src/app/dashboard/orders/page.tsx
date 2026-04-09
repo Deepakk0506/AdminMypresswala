@@ -114,7 +114,8 @@ export default function OrdersPage() {
 
             console.log('👥 Customers data:', customersData?.length, 'customers found');
             console.log('🧵 Services data:', servicesData?.length, 'services found');
-            console.log('📋 First order customers_id:', ordersData?.[0]?.customers_id, 'services_id:', ordersData?.[0]?.services_id);
+            console.log('📋 First order customer_id:', ordersData?.[0]?.customer_id, 'services_id:', ordersData?.[0]?.services_id);
+            console.log('📋 Full first order object:', ordersData?.[0]);
 
             // Transform data to include service names and customer info
             const transformedOrders = ordersData?.map((order: any, index: number) => {
