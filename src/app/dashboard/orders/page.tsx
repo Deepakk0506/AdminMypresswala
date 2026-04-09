@@ -36,6 +36,17 @@ interface Order {
     customer_email?: string;
     customer_phone?: string;
     
+    // Customer address info
+    customer_address_id?: string;
+    contact_name?: string;
+    contact_phone?: string;
+    address_line1?: string;
+    address_line2?: string;
+    city?: string;
+    state?: string;
+    postal_code?: string;
+    is_default_address?: boolean;
+    
     // Service info
     service_name?: string;
 }
@@ -102,6 +113,15 @@ export default function OrdersPage() {
                 console.error("❌ Error fetching customers:", customersError);
             }
 
+            // Fetch customer addresses
+            const { data: addressesData, error: addressesError } = await supabase
+                .from("customer_addresses")
+                .select("id, customer_id, contact_name, contact_phone, address_line1, address_line2, city, state, postal_code, is_default");
+
+            if (addressesError) {
+                console.error("❌ Error fetching addresses:", addressesError);
+            }
+
             // Fetch services separately  
             const { data: servicesData, error: servicesError } = await supabase
                 .from("services")
@@ -113,6 +133,7 @@ export default function OrdersPage() {
             }
 
             console.log('👥 Customers data:', customersData?.length, 'customers found');
+            console.log('📍 Addresses data:', addressesData?.length, 'addresses found');
             console.log('🧵 Services data:', servicesData?.length, 'services found');
             console.log('📋 First order customer_id:', ordersData?.[0]?.customer_id, 'services_id:', ordersData?.[0]?.services_id);
             console.log('📋 Full first order object:', ordersData?.[0]);
@@ -121,17 +142,22 @@ export default function OrdersPage() {
             const transformedOrders = ordersData?.map((order: any, index: number) => {
                 const customer = customersData?.find(c => c.id === order.customer_id);
                 const service = servicesData?.find(s => s.id === order.services_id);
+                // Use address_id from order to find specific address, fallback to customer_id match
+                const address = order.address_id 
+                    ? addressesData?.find(a => a.id === order.address_id)
+                    : addressesData?.find(a => a.customer_id === order.customer_id);
                 
-                if (index === 0) {
-                    console.log('🔍 Order 0 - customer_id:', order.customer_id, 'services_id:', order.services_id);
-                    console.log('🔍 Found customer:', customer?.name || 'NOT FOUND', 'Found service:', service?.name || 'NOT FOUND');
-                }
+                // Log all orders with contact info
+                console.log(`🔍 Order ${index} - ID: ${order.id?.slice(0,8)}, address_id: ${order.address_id}, found contact: ${address?.contact_name || 'NOT FOUND'}`);
                 
                 return {
                     ...order,
                     customer_name: customer?.name || 'Unknown Customer',
                     customer_email: customer?.email || '',
                     customer_phone: customer?.phone || '',
+                    contact_name: address?.contact_name || '',
+                    contact_phone: address?.contact_phone || '',
+                    delivery_address: address ? `${address.address_line1}, ${address.city}` : '',
                     service_name: service?.name || 'Unknown Service',
                     // Legacy fields for compatibility
                     customerName: customer?.name || 'Unknown Customer',
@@ -143,6 +169,7 @@ export default function OrdersPage() {
             }) || [];
 
             console.log('✅ Final transformed orders:', transformedOrders.length, 'orders ready to display');
+            console.log('📋 Orders with contact info:', transformedOrders.map(o => ({ id: o.id.slice(0,8), contact: o.contact_name })));
             setOrders(transformedOrders);
 
         } catch (err) {
@@ -654,6 +681,33 @@ export default function OrdersPage() {
                                                         )}
                                                     </div>
                                                 </div>
+
+                                                {/* Contact Info */}
+                                                {(selectedOrder.contact_name || selectedOrder.contact_phone) && (
+                                                    <div>
+                                                        <h3 className="text-xl font-semibold mb-4 text-gray-800">Contact Information</h3>
+                                                        <div className="space-y-4">
+                                                            {selectedOrder.contact_name && (
+                                                                <div className="flex items-center gap-3">
+                                                                    <Users className="w-5 h-5 text-green-500" />
+                                                                    <div>
+                                                                        <p className="text-sm text-gray-500">Contact Name</p>
+                                                                        <p className="font-semibold text-gray-800">{selectedOrder.contact_name}</p>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                            {selectedOrder.contact_phone && (
+                                                                <div className="flex items-center gap-3">
+                                                                    <AlertCircle className="w-5 h-5 text-green-500" />
+                                                                    <div>
+                                                                        <p className="text-sm text-gray-500">Contact Phone</p>
+                                                                        <p className="font-semibold text-gray-800">{selectedOrder.contact_phone}</p>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
 
                                             {/* Financial Summary */}
@@ -792,9 +846,30 @@ export default function OrdersPage() {
                                                 <div>
                                                     <h4 className="font-semibold text-gray-800 mb-3">Delivery Address</h4>
                                                     <div className="bg-gray-50 p-4 rounded-xl">
-                                                        <p className="text-gray-700">
-                                                            {selectedOrder.delivery_address || 'No delivery address specified'}
-                                                        </p>
+                                                        {selectedOrder.address_line1 ? (
+                                                            <div className="space-y-1 text-gray-700">
+                                                                <p className="font-medium">{selectedOrder.contact_name || selectedOrder.customer_name}</p>
+                                                                {selectedOrder.contact_phone && (
+                                                                    <p className="text-sm text-gray-500">{selectedOrder.contact_phone}</p>
+                                                                )}
+                                                                <p className="mt-2">{selectedOrder.address_line1}</p>
+                                                                {selectedOrder.address_line2 && <p>{selectedOrder.address_line2}</p>}
+                                                                <p>
+                                                                    {selectedOrder.city}
+                                                                    {selectedOrder.state && `, ${selectedOrder.state}`}
+                                                                    {selectedOrder.postal_code && ` - ${selectedOrder.postal_code}`}
+                                                                </p>
+                                                                {selectedOrder.is_default_address && (
+                                                                    <span className="inline-flex items-center mt-2 px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                                                                        Default Address
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            <p className="text-gray-500 italic">
+                                                                {selectedOrder.delivery_address || 'No delivery address specified'}
+                                                            </p>
+                                                        )}
                                                     </div>
                                                 </div>
                                                 <div>
