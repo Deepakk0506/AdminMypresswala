@@ -12,11 +12,13 @@ import {
 } from "framer-motion";
 import {
   Eye, EyeOff, CheckCircle2, ArrowRight, ExternalLink,
-  Clock, Truck, Shirt, Star, Menu, X, Sparkles,
+  Clock, Truck, Shirt, Star, Menu, X, Sparkles, AlertCircle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import { useAuth } from "@/contexts/AuthContext";
+import MFAVerifyModal from "@/components/mfa/MFAVerifyModal";
 
 // ─── Types ────────────────────────────────────────────
 interface Confetti {
@@ -53,6 +55,10 @@ function HeroSection({ heroY, router }: { heroY: any; router: any }) {
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorShake, setErrorShake] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [loginError, setLoginError] = useState("");
+  const [showMFAModal, setShowMFAModal] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState("");
+  const { login, verifyMFA } = useAuth();
 
   // --- Cursor motion values (Butter-Smooth Config) ---
   const cursorX = useMotionValue(0);
@@ -89,20 +95,48 @@ function HeroSection({ heroY, router }: { heroY: any; router: any }) {
     return () => window.removeEventListener("mousemove", onMove);
   }, [cursorX, cursorY, rawMouseX, rawMouseY]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoginError("");
     if (!email || !password) {
       setErrorShake(true);
       setTimeout(() => setErrorShake(false), 500);
       return;
     }
     setIsLoading(true);
-    setTimeout(() => {
+    
+    const result = await login(email, password);
+    
+    if (result.success) {
+      if (result.mfaRequired) {
+        // MFA required - show MFA modal
+        setIsLoading(false);
+        setPendingEmail(result.user?.email || email);
+        setShowMFAModal(true);
+      } else {
+        // No MFA - login complete
+        setIsLoading(false);
+        setIsSuccess(true);
+        setShowConfetti(true);
+        setTimeout(() => router.push("/dashboard"), 1500);
+      }
+    } else {
       setIsLoading(false);
+      setLoginError(result.error || "Login failed");
+      setErrorShake(true);
+      setTimeout(() => setErrorShake(false), 500);
+    }
+  };
+
+  const handleMFAVerify = async (code: string, isBackupCode: boolean) => {
+    const success = await verifyMFA(code, isBackupCode);
+    if (success) {
+      setShowMFAModal(false);
       setIsSuccess(true);
       setShowConfetti(true);
-      setTimeout(() => router.push("/dashboard"), 2200);
-    }, 1500);
+      setTimeout(() => router.push("/dashboard"), 1500);
+    }
+    return success;
   };
 
   const scrollToCard = () => {
@@ -325,6 +359,14 @@ function HeroSection({ heroY, router }: { heroY: any; router: any }) {
                 </div>
                 <div className="relative z-10 mb-6 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
 
+                {/* Error Message */}
+                {loginError && (
+                  <div className="relative z-10 mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+                    <span className="text-sm text-red-200">{loginError}</span>
+                  </div>
+                )}
+
                 {/* Form fields */}
                 <div className="space-y-5 relative z-10">
                   <div className="space-y-1.5">
@@ -423,6 +465,14 @@ function HeroSection({ heroY, router }: { heroY: any; router: any }) {
                 </motion.div>
               )}
             </AnimatePresence>
+
+            {/* MFA Verification Modal */}
+            <MFAVerifyModal
+              isOpen={showMFAModal}
+              onClose={() => setShowMFAModal(false)}
+              onVerify={handleMFAVerify}
+              email={pendingEmail}
+            />
           </motion.div>
         </div>
       </div>

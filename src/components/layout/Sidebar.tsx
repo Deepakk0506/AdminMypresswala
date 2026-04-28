@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Store, Settings, Bell, Search, Menu, LogOut, PackageSearch, Wrench, CreditCard } from "lucide-react";
+import { LayoutDashboard, Users, Store, Settings, Menu, LogOut, PackageSearch, Wrench, CreditCard } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";

@@ -11,7 +11,7 @@ import {
   Shirt, 
   Grid3x3, 
   Settings, 
-  BarChart3 
+  BarChart3
 } from "lucide-react";
 
 type TabType = 'services' | 'categories' | 'garments' | 'pricing';

@@ -1,8 +1,10 @@
 "use client";
 
-import { Bell, Search, User, Moon, Sun } from "lucide-react";
+import { Bell, Search, Moon } from "lucide-react";
+import ProfileDropdown from "./ProfileDropdown";
 
 export function Topbar() {
+
     return (
         <header className="h-16 flex items-center justify-between px-6 bg-white/80 backdrop-blur-md border-b border-gray-100 dark:bg-primary/80 dark:border-white/10 sticky top-0 z-40">
             <div className="flex-1 flex items-center">
@@ -35,18 +37,7 @@ export function Topbar() {
 
                 <div className="h-8 w-px bg-gray-200 dark:bg-white/10 mx-2" />
 
-                <button
-                    aria-label="User profile"
-                    aria-haspopup="menu"
-                    className="flex items-center space-x-2 group p-1 pr-3 rounded-full hover:bg-gray-50 dark:hover:bg-white/5 transition-all active:scale-95"
-                >
-                    <div className="w-8 h-8 rounded-full bg-secondary/10 flex items-center justify-center text-secondary font-medium shadow-inner">
-                        A
-                    </div>
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-200 group-hover:text-black dark:group-hover:text-white transition-colors">
-                        Admin
-                    </span>
-                </button>
+                <ProfileDropdown />
             </div>
         </header>
     );
